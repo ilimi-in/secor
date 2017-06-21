@@ -57,6 +57,7 @@ public class FileRegistryTest extends TestCase {
         PropertiesConfiguration properties = new PropertiesConfiguration();
         properties.addProperty("secor.file.reader.writer.factory",
                 "com.pinterest.secor.io.impl.SequenceFileReaderWriterFactory");
+        properties.addProperty("secor.file.age.youngest", true);
         properties.addProperty("secor.max.file.age.policy", "");
         SecorConfig secorConfig = new SecorConfig(properties);
         mRegistry = new FileRegistry(secorConfig);
@@ -65,7 +66,7 @@ public class FileRegistryTest extends TestCase {
         mLogFilePathGz = new LogFilePath("/some_parent_dir", PATH_GZ);
     }
 
-    private void createWriter() throws Exception {
+    private FileWriter createWriter() throws Exception {
         PowerMockito.mockStatic(FileUtil.class);
 
         PowerMockito.mockStatic(ReflectionUtil.class);
@@ -74,7 +75,8 @@ public class FileRegistryTest extends TestCase {
                 ReflectionUtil.createFileWriter(
                         Mockito.any(String.class),
                         Mockito.any(LogFilePath.class),
-                        Mockito.any(CompressionCodec.class)
+                        Mockito.any(CompressionCodec.class),
+                        Mockito.any(SecorConfig.class)
                 ))
                 .thenReturn(writer);
 
@@ -83,6 +85,8 @@ public class FileRegistryTest extends TestCase {
         FileWriter createdWriter = mRegistry.getOrCreateWriter(
                 mLogFilePath, null);
         assertTrue(createdWriter == writer);
+
+        return writer;
     }
 
     public void testGetOrCreateWriter() throws Exception {
@@ -95,7 +99,8 @@ public class FileRegistryTest extends TestCase {
         PowerMockito.verifyStatic();
         ReflectionUtil.createFileWriter(Mockito.any(String.class),
                 Mockito.any(LogFilePath.class),
-                Mockito.any(CompressionCodec.class)
+                Mockito.any(CompressionCodec.class),
+                Mockito.any(SecorConfig.class)
         );
 
         PowerMockito.verifyStatic();
@@ -115,6 +120,18 @@ public class FileRegistryTest extends TestCase {
         assertTrue(logFilePaths.contains(mLogFilePath));
     }
 
+    public void testGetWriterShowBeNullForNewFilePaths() throws Exception {
+        assertNull(mRegistry.getWriter(mLogFilePath));
+    }
+
+    public void testGetWriterShowBeNotNull() throws Exception {
+        FileWriter createdWriter = createWriter();
+
+        FileWriter writer = mRegistry.getWriter(mLogFilePath);
+        assertNotNull(writer);
+        assertEquals(createdWriter, writer);
+    }
+
     private void createCompressedWriter() throws Exception {
         PowerMockito.mockStatic(FileUtil.class);
 
@@ -124,7 +141,8 @@ public class FileRegistryTest extends TestCase {
                 ReflectionUtil.createFileWriter(
                         Mockito.any(String.class),
                         Mockito.any(LogFilePath.class),
-                        Mockito.any(CompressionCodec.class)
+                        Mockito.any(CompressionCodec.class),
+                        Mockito.any(SecorConfig.class)
                 ))
                 .thenReturn(writer);
 
@@ -149,7 +167,8 @@ public class FileRegistryTest extends TestCase {
         PowerMockito.verifyStatic();
         ReflectionUtil.createFileWriter(Mockito.any(String.class),
                 Mockito.any(LogFilePath.class),
-                Mockito.any(CompressionCodec.class)
+                Mockito.any(CompressionCodec.class),
+                Mockito.any(SecorConfig.class)
         );
 
         TopicPartition topicPartition = new TopicPartition("some_topic", 0);
